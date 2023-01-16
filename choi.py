@@ -48,41 +48,6 @@ class Smart_App(QWidget, form_class):
         self.admin_page_btn_9.clicked.connect(self.admin_page)
         self.admin_page_btn_10.clicked.connect(self.admin_page)
 
-#=================================기태======================================
-        #기본 페이지 지정 (관리자 페이지)
-        self.login_stackedWidget.setCurrentIndex(5)
-        #상호작용 버튼
-        self.see_order_btn.clicked.connect(self.move_order_manage)
-        self.inventory_btn.clicked.connect(self.move_inventory)
-        self.login_stackedWidget.setCurrentIndex(5)
-        self.admin_page_btn_6.clicked.connect(self.move_admin_page)
-        self.admin_page_btn_7.clicked.connect(self.move_admin_page)
-        self.admin_page_btn_9.clicked.connect(self.move_admin_page)
-        self.see_not_receive_btn.clicked.connect(self.see_not_received_order)
-        self.see_qna_btn.clicked.connect(self.see_qna_manage)
-        self.renew_order_manage_btn.clicked.connect(self.renew_order_manage_list)
-        self.order_status_change_btn.clicked.connect(self.order_status_change)
-        self.see_not_receive_btn.clicked.connect(self.see_not_received_order) # 접수되지 않은 주문 확인하기
-        self.order_status_change_btn.clicked.connect(self.order_status_change) # 주문 상태 변경 시켜줌 (주문,접수,완료)
-        # qna창에서 주문번호가 있는 항목 선택하여 버튼 누르면 이동
-        self.see_selected_order_btn.clicked.connect(self.see_selected_order)
-        self.inventory_cb.currentIndexChanged.connect(self.calculate_min_item)
-        self.ingredient_order_btn.clicked.connect(self.order_ingredient)
-        self.ira = inventory_renew_alarm(self)
-
-        self.inventory_cb.currentIndexChanged.connect(self.calculate_min_item) # 최대 개수 계산
-        self.ingredient_order_btn.clicked.connect(self.order_ingredient) #재고 발주
-        self.ira = inventory_renew_alarm(self) # 재고 부족 알림 스레드 생성
-        self.inventorySignal = True
-        self.ira.start() #재고 부족 알림 스레드 시작
-#====================================기태====================================================
-
-
-
-
-
-
-
     def bom_page(self): # bom으로 이동
         self.add_code_comboBox.clear()
         self.login_stackedWidget.setCurrentIndex(8)
