@@ -16,10 +16,10 @@
   <widget class="QStackedWidget" name="login_stackedWidget">
    <property name="geometry">
     <rect>
-     <x>30</x>
+     <x>20</x>
      <y>10</y>
-     <width>481</width>
-     <height>421</height>
+     <width>541</width>
+     <height>491</height>
     </rect>
    </property>
    <property name="currentIndex">
@@ -685,9 +685,152 @@
       <rect>
        <x>20</x>
        <y>90</y>
-       <width>441</width>
+       <width>511</width>
        <height>291</height>
       </rect>
+     </property>
+     <property name="editTriggers">
+      <set>QAbstractItemView::NoEditTriggers</set>
+     </property>
+     <property name="selectionBehavior">
+      <enum>QAbstractItemView::SelectRows</enum>
+     </property>
+     <attribute name="horizontalHeaderCascadingSectionResizes">
+      <bool>true</bool>
+     </attribute>
+     <attribute name="horizontalHeaderStretchLastSection">
+      <bool>true</bool>
+     </attribute>
+     <column>
+      <property name="text">
+       <string>주문번호</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>메뉴명</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>회원ID</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>수량</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>주문상태</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>취소 여부</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>메뉴코드</string>
+      </property>
+     </column>
+    </widget>
+    <widget class="QLabel" name="order_status_change_label">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>400</y>
+       <width>141</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>선택항목 주문상태 변경</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="admin_page_btn_6">
+     <property name="geometry">
+      <rect>
+       <x>430</x>
+       <y>20</y>
+       <width>101</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>관리자 페이지로</string>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="order_status_change_cb">
+     <property name="geometry">
+      <rect>
+       <x>190</x>
+       <y>400</y>
+       <width>151</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <item>
+      <property name="text">
+       <string>선택 안함</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>주문</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>접수</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>완료</string>
+      </property>
+     </item>
+    </widget>
+    <widget class="QPushButton" name="see_not_receive_btn">
+     <property name="geometry">
+      <rect>
+       <x>190</x>
+       <y>440</y>
+       <width>121</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>접수되지 않은 
+목록 보기 </string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="renew_order_manage_btn">
+     <property name="geometry">
+      <rect>
+       <x>330</x>
+       <y>440</y>
+       <width>121</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>전체 보기</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="order_status_change_btn">
+     <property name="geometry">
+      <rect>
+       <x>360</x>
+       <y>400</y>
+       <width>91</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>변경</string>
      </property>
     </widget>
    </widget>
@@ -721,11 +864,43 @@
     <widget class="QTableWidget" name="qna_tableWidget">
      <property name="geometry">
       <rect>
-       <x>40</x>
-       <y>140</y>
-       <width>391</width>
-       <height>261</height>
+       <x>30</x>
+       <y>70</y>
+       <width>491</width>
+       <height>351</height>
       </rect>
+     </property>
+     <property name="editTriggers">
+      <set>QAbstractItemView::NoEditTriggers</set>
+     </property>
+     <property name="selectionBehavior">
+      <enum>QAbstractItemView::SelectRows</enum>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="admin_page_btn_7">
+     <property name="geometry">
+      <rect>
+       <x>420</x>
+       <y>10</y>
+       <width>101</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>관리자 페이지로</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="see_selected_order_btn">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>430</y>
+       <width>191</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>주문으로 이동하기</string>
      </property>
     </widget>
    </widget>
@@ -919,8 +1094,8 @@
     <widget class="QComboBox" name="ingredient_name_comboBox">
      <property name="geometry">
       <rect>
-       <x>20</x>
-       <y>380</y>
+       <x>10</x>
+       <y>460</y>
        <width>76</width>
        <height>22</height>
       </rect>
@@ -934,8 +1109,8 @@
     <widget class="QComboBox" name="ingredient_code_comboBox">
      <property name="geometry">
       <rect>
-       <x>110</x>
-       <y>380</y>
+       <x>90</x>
+       <y>460</y>
        <width>76</width>
        <height>22</height>
       </rect>
@@ -949,8 +1124,8 @@
     <widget class="QLineEdit" name="lineEdit">
      <property name="geometry">
       <rect>
-       <x>200</x>
-       <y>380</y>
+       <x>180</x>
+       <y>460</y>
        <width>111</width>
        <height>21</height>
       </rect>
@@ -962,14 +1137,60 @@
     <widget class="QPushButton" name="add_btn">
      <property name="geometry">
       <rect>
-       <x>330</x>
-       <y>380</y>
+       <x>320</x>
+       <y>460</y>
        <width>75</width>
        <height>23</height>
       </rect>
      </property>
      <property name="text">
       <string>입력</string>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="comboBox">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>390</y>
+       <width>191</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <item>
+      <property name="text">
+       <string/>
+      </property>
+     </item>
+    </widget>
+    <widget class="QLabel" name="label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>340</y>
+       <width>251</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>13</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>만들 수 있는 상품 개 수</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="admin_page_btn_9">
+     <property name="geometry">
+      <rect>
+       <x>430</x>
+       <y>10</y>
+       <width>101</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>관리자 페이지로</string>
      </property>
     </widget>
    </widget>

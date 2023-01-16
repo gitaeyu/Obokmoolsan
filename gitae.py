@@ -6,17 +6,131 @@ from PyQt5 import uic, QtGui
 from datetime import datetime
 import time
 
-form_class = uic.loadUiType('./smartapp.ui')[0]
+form_class = uic.loadUiType('./smartappg.ui')[0]
 
 class Main(QMainWindow, form_class):
     def __init__(self):
         super().__init__()
-        self.conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
-                              db='obokmoolsan', charset='utf8')
-        # 커서 획득
-        self.c = self.conn.cursor()
         self.setupUi(self)
+        self.see_order_btn.clicked.connect(self.move_order_manage)
+        self.inventory_btn.clicked.connect(self.move_inventory)
+        self.login_stackedWidget.setCurrentIndex(5)
+        self.admin_page_btn_6.clicked.connect(self.move_admin_page)
+        self.admin_page_btn_7.clicked.connect(self.move_admin_page)
+        self.admin_page_btn_9.clicked.connect(self.move_admin_page)
+        self.see_not_receive_btn.clicked.connect(self.see_not_received_order)
+        self.see_qna_btn.clicked.connect(self.see_qna_manage)
+        self.renew_order_manage_btn.clicked.connect(self.renew_order_manage_list)
+        self.order_status_change_btn.clicked.connect(self.order_status_change)
+        self.see_selected_order_btn.clicked.connect(self.see_selected_order)
 
+
+    def see_selected_order(self):
+        self.login_stackedWidget.setCurrentIndex(6)
+        #선택한 행의 가장 첫번쨰 값이 주문번호이므로 이걸 텍스트로 받아와서 SQL 쿼리문에 활용한다.
+        ordernumber = self.qna_tableWidget.item(self.qna_tableWidget.currentRow(), 1).text()
+        conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
+                         db='obokmoolsan', charset='utf8')
+        c = conn.cursor()
+        c.execute(f"SELECT * FROM ORDERMANAGE where 주문번호 = '{ordernumber}'")
+        order_manage_list = c.fetchall()
+        conn.close()
+        self.order_tableWidget.clearContents()
+        self.order_tableWidget.setRowCount(len(order_manage_list))
+        self.order_tableWidget.setColumnCount(len(order_manage_list[0]))
+        for j in range(len(order_manage_list)):
+            for k in range(len(order_manage_list[j])):
+                self.order_tableWidget.setItem(j, k, QTableWidgetItem(str(order_manage_list[j][k])))
+        for i in range(len(order_manage_list[0])):
+            self.order_tableWidget.horizontalHeader().setSectionResizeMode(i, QHeaderView.ResizeToContents)
+    def renew_qna_manage_list(self):
+        conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
+                          db='obokmoolsan', charset='utf8')
+        c = conn.cursor()
+        c.execute(f"SELECT * FROM inquiry_manage")
+        qna_manage_list = c.fetchall()
+        conn.close()
+        self.qna_tableWidget.clearContents()
+        self.qna_tableWidget.setRowCount(len(qna_manage_list))
+        self.qna_tableWidget.setColumnCount(len(qna_manage_list[0]))
+        for j in range(len(qna_manage_list)):
+            for k in range(len(qna_manage_list[j])):
+                self.qna_tableWidget.setItem(j, k, QTableWidgetItem(str(qna_manage_list[j][k])))
+        for i in range(len(qna_manage_list[0])):
+            self.qna_tableWidget.horizontalHeader().setSectionResizeMode(i, QHeaderView.ResizeToContents)
+    def see_qna_manage(self):
+        self.login_stackedWidget.setCurrentIndex(7)
+        self.renew_qna_manage_list()
+    def order_status_change(self):
+
+        status = self.order_status_change_cb.currentText()
+        if status == '선택 안함' :
+            return
+        #선택한 행의 가장 첫번쨰 값이 주문번호이므로 이걸 텍스트로 받아와서 SQL 쿼리문에 활용한다.
+        ordernumber = self.order_tableWidget.item(self.order_tableWidget.currentRow(), 0).text()
+        conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
+                         db='obokmoolsan', charset='utf8')
+        c = conn.cursor()
+        c.execute(f"update ordermanage set 상태 = '{status}' where 주문번호 = '{ordernumber}'")
+        conn.commit()
+        conn.close()
+        self.renew_order_manage_list()
+
+    def see_not_received_order(self):
+        conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
+                         db='obokmoolsan', charset='utf8')
+        c = conn.cursor()
+        c.execute(f"SELECT * FROM ORDERMANAGE where 상태 = '주문'")
+        order_manage_list = c.fetchall()
+        conn.close()
+        self.order_tableWidget.clearContents()
+        self.order_tableWidget.setRowCount(len(order_manage_list))
+        self.order_tableWidget.setColumnCount(len(order_manage_list[0]))
+        for j in range(len(order_manage_list)):
+            for k in range(len(order_manage_list[j])):
+                self.order_tableWidget.setItem(j, k, QTableWidgetItem(str(order_manage_list[j][k])))
+        for i in range(len(order_manage_list[0])):
+            self.order_tableWidget.horizontalHeader().setSectionResizeMode(i, QHeaderView.ResizeToContents)
+
+    def move_admin_page(self):
+        self.login_stackedWidget.setCurrentIndex(5)
+    def renew_order_manage_list(self):
+        conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
+                          db='obokmoolsan', charset='utf8')
+        c = conn.cursor()
+        c.execute(f"SELECT * FROM ORDERMANAGE")
+        order_manage_list = c.fetchall()
+        conn.close()
+        self.order_tableWidget.clearContents()
+        self.order_tableWidget.setRowCount(len(order_manage_list))
+        self.order_tableWidget.setColumnCount(len(order_manage_list[0]))
+        for j in range(len(order_manage_list)):
+            for k in range(len(order_manage_list[j])):
+                self.order_tableWidget.setItem(j, k, QTableWidgetItem(str(order_manage_list[j][k])))
+        for i in range(len(order_manage_list[0])):
+            self.order_tableWidget.horizontalHeader().setSectionResizeMode(i, QHeaderView.ResizeToContents)
+
+    def move_inventory(self):
+        self.login_stackedWidget.setCurrentIndex(9)
+        self.renew_inventory_list()
+    def renew_inventory_list(self):
+        conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
+                          db='obokmoolsan', charset='utf8')
+        c = conn.cursor()
+        c.execute(f"SELECT * FROM inventory")
+        inventory_list = c.fetchall()
+        conn.close()
+        self.inventory_tableWidget.clearContents()
+        self.inventory_tableWidget.setRowCount(len(inventory_list))
+        self.inventory_tableWidget.setColumnCount(len(inventory_list[0]))
+        for j in range(len(inventory_list)):
+            for k in range(len(inventory_list[j])):
+                self.inventory_tableWidget.setItem(j, k, QTableWidgetItem(str(inventory_list[j][k])))
+        for i in range(len(inventory_list[0])):
+            self.inventory_tableWidget.horizontalHeader().setSectionResizeMode(i, QHeaderView.ResizeToContents)
+    def move_order_manage(self):
+        self.login_stackedWidget.setCurrentIndex(6)
+        self.renew_order_manage_list()
 
     def db_connect(self):
         conn = p.connect(host='wlgur', port=3306, user='root', password='wlgur1234',
@@ -51,7 +165,7 @@ class Main(QMainWindow, form_class):
     # 채팅페이지의 채팅방보기를 클릭하면 실행되는 기능으로 마지막 메세지를 기준으로 하여 리스트 생성하게 하려고 함.
     def see_chatlist(self):
         self.messageSW.setCurrentIndex(0)  # 채팅방 목록 보이게 함.
-        self.refresh_message_list()  # 채팅방 리스트 갱신
+        self.renew_message_list()  # 채팅방 리스트 갱신
         self.MessageSignal = False  # 스레드의 Run메서드의 While문을 멈추게하기 위하여 Signal을 False로 바꿈
         self.chat1.stop()  # 채팅 갱신 스레드 멈춤
         self.chatroomSignal = True  # 채팅방  갱신 스레드의 신호를 True로 바꿈
@@ -81,7 +195,7 @@ class Main(QMainWindow, form_class):
         self.chat_lineEdit.clear()
 
     # 메세지를 불러오는 기능으로 접속한 ID와 Combobox 또는 채팅방 메세지 리스트의 Receiver가 누구냐에 따라 채팅방 불러옴.
-    def refresh_chat_textBrowser(self):
+    def renew_chat_textBrowser(self):
         self.chat_textBrowser.clear()
         self.c.execute(f"select message.*,person.Name from message join person on message.id_number = person.id_num \
                             where (person.Name = '{self.receiver}' and message.Receiver = '{self.user_name}') or \
@@ -91,7 +205,7 @@ class Main(QMainWindow, form_class):
             self.chat_textBrowser.append(f'{i[2]}\n \n {i[4]} : {i[1]}\n')
 
     # 채팅방을 불러오는 기능
-    def refresh_message_list(self):
+    def renew_message_list(self):
         self.message_list.clear()
         self.c.execute(f"select a.* from (select message.*,person.name from message \
                         join person on message.id_number = person.id_num where (id_number, Time) \
@@ -124,7 +238,7 @@ class Main(QMainWindow, form_class):
             return
         self.login_SW.setCurrentIndex(5)
         self.messageSW.setCurrentIndex(0)
-        self.refresh_message_list()
+        self.renew_message_list()
         self.chatroomSignal = True
         self.chat2.start()
 
