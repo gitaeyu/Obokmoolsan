@@ -11,16 +11,19 @@ form_class = uic.loadUiType('./smartapp.ui')[0]
 class Main(QMainWindow, form_class):
     def __init__(self):
         super().__init__()
-        self.Signal_login = False
-        self.INFO_login = []
-
-        self.conn = p.connect(host='127.0.0.1', port=3306, user='root', password='00000000',
-                              db='beaconapp', charset='utf8')
+        self.conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
+                              db='obokmoolsan', charset='utf8')
         # 커서 획득
         self.c = self.conn.cursor()
         self.setupUi(self)
 
 
+    def db_connect(self):
+        conn = p.connect(host='wlgur', port=3306, user='root', password='wlgur1234',
+                              db='beaconapp', charset='utf8')
+        # 커서 획득
+        c = conn.cursor()
+        c.execute()
 
     # 새로운 메세지 알림이 왔을때 클릭시 새로운 메세지를 보낸 채팅방에 바로 들어가도록 해줌.
     def gotochatting(self):
