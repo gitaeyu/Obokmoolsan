@@ -2,9 +2,6 @@
 <ui version="4.0">
  <class>Form</class>
  <widget class="QWidget" name="Form">
-  <property name="enabled">
-   <bool>true</bool>
-  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -26,7 +23,7 @@
     </rect>
    </property>
    <property name="currentIndex">
-    <number>5</number>
+    <number>10</number>
    </property>
    <widget class="QWidget" name="page">
     <widget class="QPushButton" name="login_btn">
@@ -464,26 +461,11 @@
        <height>41</height>
       </rect>
      </property>
-     <property name="inputMask">
-      <string/>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-     <property name="maxLength">
-      <number>32767</number>
-     </property>
-     <property name="readOnly">
-      <bool>false</bool>
-     </property>
      <property name="placeholderText">
       <string>몇개 주문할껀지 개수 입력(숫자만 입력)</string>
      </property>
-     <property name="clearButtonEnabled">
-      <bool>false</bool>
-     </property>
     </widget>
-    <widget class="QPushButton" name="user_order_item_btn">
+    <widget class="QPushButton" name="pushButton">
      <property name="geometry">
       <rect>
        <x>400</x>
@@ -520,16 +502,6 @@
      </property>
      <property name="text">
       <string>사용자 페이지로</string>
-     </property>
-    </widget>
-    <widget class="QComboBox" name="maxmenu_comboBox">
-     <property name="geometry">
-      <rect>
-       <x>160</x>
-       <y>200</y>
-       <width>111</width>
-       <height>41</height>
-      </rect>
      </property>
     </widget>
    </widget>
@@ -808,19 +780,6 @@
      </property>
      <property name="text">
       <string>Test page</string>
-     </property>
-    </widget>
-    <widget class="QLabel" name="new_menu_label">
-     <property name="geometry">
-      <rect>
-       <x>260</x>
-       <y>380</y>
-       <width>101</width>
-       <height>31</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>신메뉴 알림</string>
      </property>
     </widget>
    </widget>

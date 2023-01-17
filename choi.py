@@ -49,6 +49,7 @@ class Smart_App(QMainWindow, form_class):
         self.admin_page_btn_8.clicked.connect(self.admin_page)
         self.admin_page_btn_9.clicked.connect(self.admin_page)
         self.admin_page_btn_10.clicked.connect(self.admin_page)
+         jihyeok
         #테스트 페이지로
         self.Testpage_btn.clicked.connect(self.move_test_page)
         #사용자 주문하기
@@ -58,8 +59,7 @@ class Smart_App(QMainWindow, form_class):
         self.user_order_item_btn.clicked.connect(self.select_menu)
         # self.menu_comboBox.currentTextChanged.connect(self.change_num)# 콤보박스 선택 글자 바뀌면 최대개수 바뀜
         self.menu_comboBox.currentTextChanged.connect(self.change_num)
-
-
+        self.admin_page_btn_11.clicked.connect(self.move_admin_page)
 
 # #=================================기태======================================
         #기본 페이지 지정 (관리자 페이지)
@@ -71,6 +71,7 @@ class Smart_App(QMainWindow, form_class):
         self.admin_page_btn_6.clicked.connect(self.move_admin_page)
         self.admin_page_btn_7.clicked.connect(self.move_admin_page)
         self.admin_page_btn_9.clicked.connect(self.move_admin_page)
+
         self.see_not_receive_btn.clicked.connect(self.see_not_received_order)
         self.see_qna_btn.clicked.connect(self.see_qna_manage)
         self.renew_order_manage_btn.clicked.connect(self.renew_order_manage_list)
@@ -88,6 +89,53 @@ class Smart_App(QMainWindow, form_class):
         self.ira = inventory_renew_alarm(self) # 재고 부족 알림 스레드 생성
         self.inventorySignal = True
         self.ira.start() #재고 부족 알림 스레드 시작
+
+        self.Testpage_btn.clicked.connect(self.move_test_page)
+        #자동 주문상태 변경 스레드 기능
+        self.order_status_start_btn.clicked.connect(self.auto_order_change_start)
+        self.order_status_stop_btn.clicked.connect(self.auto_order_change_stop)
+        self.aot = Auto_order_thread(self)
+        #자동 문의 등록 스레드 기능
+        self.qna_start_btn.clicked.connect(self.auto_qna_start)
+        self.qna_stop_btn.clicked.connect(self.auto_qna_stop)
+        self.aqt = Auto_qna_thread(self)
+
+    def auto_qna_start(self):
+        self.Auto_qna_Signal = True
+        self.aqt.start()
+        self.qna_start_btn.setDisabled(True)
+    def auto_qna_stop(self):
+        self.Auto_qna_Signal = False
+        self.aqt.stop()
+        self.qna_start_btn.setEnabled(True)
+
+
+    def auto_qna_register(self):
+        conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
+                         db='obokmoolsan', charset='utf8')
+        c = conn.cursor()
+        c.execute("select * from ordermanage order by rand() limit 1;")
+        a = c.fetchall()
+        ordernumber = a[0][0]
+        menuname = a[0][1]
+        orderid = a[0][2]
+        menucode = a[0][6]
+        c.execute(f"insert into inquiry_manage (주문번호,제품명,제품코드,상태,회원ID,문의내용,답장내용)\
+                    values ('{ordernumber}','{menuname}','{menucode}','접수','{orderid}','Test','Test')")
+        conn.commit()
+        conn.close()
+
+    def auto_order_change_start(self):
+        self.Auto_order_Signal = True
+        self.aot.start()
+        self.order_status_start_btn.setDisabled(True)
+    def auto_order_change_stop(self):
+        self.Auto_order_Signal = False
+        self.aot.stop()
+        self.order_status_start_btn.setEnabled(True)
+
+    def move_test_page(self):
+        self.login_stackedWidget.setCurrentIndex(11)
 #====================================기태====================================================
     def move_test_page(self):
         self.login_stackedWidget.setCurrentIndex(11)
@@ -197,23 +245,33 @@ class Smart_App(QMainWindow, form_class):
             return
         try :
             orderstatus = self.order_tableWidget.item(self.order_tableWidget.currentRow(), 4).text()
+            orderqty = self.order_tableWidget.item(self.order_tableWidget.currentRow(), 3).text()
+            orderitem = self.order_tableWidget.item(self.order_tableWidget.currentRow(), 1).text()
         #행을 선택하지 않고 버튼 실행했을시 오류를 방지하기위해 Return해줌
         except :
             return
         if orderstatus == '완료':
             QMessageBox.critical(self, "완료 상품입니다", "완료상태에서는 변경할 수 없습니다.")
             return
-        # 선택한 행의 가장 첫번쨰 값이 주문번호이므로 이걸 텍스트로 받아와서 SQL 쿼리문에 활용한다.
-        ordernumber = self.order_tableWidget.item(self.order_tableWidget.currentRow(), 0).text()
         conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
                          db='obokmoolsan', charset='utf8')
         c = conn.cursor()
+        # 수량이 물품의 제작가능한 최대 개수보다 많으면 return 해버린다 2023.01.18 1225 초안
+        c.execute(f"select min(c.d) from (select (a.남은수량 / b.수량)as d \
+                    from inventory a inner join bom b on a.재료코드 = b.재료코드 where 요리 = '{orderitem}') as c")
+        max_value = c.fetchall()
+        print(max_value)
+        if int(orderqty) > int(max_value[0][0]):
+            QMessageBox.critical(self, "재고 부족", "재고를 주문해주세요.")
+            return
+        # 선택한 행의 가장 첫번쨰 값이 주문번호이므로 이걸 텍스트로 받아와서 SQL 쿼리문에 활용한다.
+        ordernumber = self.order_tableWidget.item(self.order_tableWidget.currentRow(), 0).text()
         c.execute(f"update ordermanage set 상태 = '{status}' where 주문번호 = '{ordernumber}'")
         conn.commit()
         conn.close()
         if status == '완료':
             QMessageBox.information(self, "제작 완료", "재고에서 재료가 소모됩니다.")
-            self.consume_inventory_item()  # 아직 실행안해봄 ㅎ.. 주문등록 테스트 기능 만들고 테스트 예정
+            self.consume_inventory_item()
         self.renew_order_manage_list()
 
     #접수되지 않은 주문리스트를 보는 메서드
@@ -594,8 +652,30 @@ class inventory_renew_alarm(QThread):
     def stop(self):
         self.quit()
         self.wait(100)  # 5000ms = 5s
+class Auto_order_thread(QThread):
+    def __init__(self, parent):
+        super().__init__()
+        self.parent = parent
 
-
+    def run(self):
+        while self.parent.Auto_order_Signal:
+            #DB 연결
+            conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
+                             db='obokmoolsan', charset='utf8')
+            c = conn.cursor()
+            # Auto_order 프로시저 콜링
+            c.execute(f"call Auto_order()")
+            conn.commit()
+            conn.close()
+            print('Auto_order 스레드 작동중')
+            self.parent.renew_order_manage_list()
+            time.sleep(20)
+    #스레드의 정지를 위한 메서드
+    def stop(self):
+        print('Auto_order 스레드 정지')
+        self.quit()
+        self.wait(100)  # 5000ms = 5s
+        
 class Alarm_Order(QThread):
     def __init__(self,parent):
         super().__init__(parent)
@@ -610,6 +690,24 @@ class Alarm_Order(QThread):
                 time.sleep(3)
             else:
                 break
+
+
+class Auto_qna_thread(QThread):
+    def __init__(self, parent):
+        super().__init__()
+        self.parent = parent
+
+    def run(self):
+        while self.parent.Auto_qna_Signal:
+            self.parent.auto_qna_register()
+            print('문의가 등록 되었습니다')
+            time.sleep(20)
+
+    #스레드의 정지를 위한 메서드
+    def stop(self):
+        print('Auto_qna 스레드 정지')
+        self.quit()
+        self.wait(100)  # 5000ms = 5s
 
 if __name__=="__main__":
     app=QApplication(sys.argv)

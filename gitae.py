@@ -6,29 +6,133 @@ from PyQt5 import uic, QtGui
 from datetime import datetime
 import time
 
+
+# 인벤토리 갱신 스레드
+class inventory_renew_alarm(QThread):
+    # 매개변수로 스레드가 선언되는 클래스에서 inventory_renew_alarm(self)라고 하여 상위 클래스를 부모로 지정
+    def __init__(self, parent):
+        super().__init__()
+        self.parent = parent
+
+    def run(self):
+        #inventorySignal이라는 bool 변수를 주어 True일때만 스레드가 계속해서 돌게 한다.
+        while self.parent.inventorySignal:
+            #DB 연결
+            conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
+                             db='obokmoolsan', charset='utf8')
+            c = conn.cursor()
+            # 현재 있는 재료 중에서 가장 적게 만들어지는 메뉴의 이름과 개수를 찾기 위한 쿼리문
+            c.execute(f"select * from (select 요리,min(a.남은수량/b.수량) as 최대개수 \
+                        from inventory a inner join bom b on a.재료코드 = b.재료코드 group by 요리) as temp\
+                          order by 최대개수 limit 1")
+            #예시 min_value = ((해물찜,5.0),)
+            min_value = c.fetchall()
+            conn.commit()
+            conn.close()
+            time.sleep(0.5)
+            # 만들어질수 있는 최대 개수가 1 이하라면 알람 생성
+            if int(min_value[0][1]) < 1:
+                self.parent.inventory_alarm_level_lbl.setText(f'{min_value[0][0]}의 재료가 부족합니다')
+                self.parent.inventory_alarm_lbl.setText(f'{min_value[0][0]}의 재료가 부족합니다')
+            else:
+                self.parent.inventory_alarm_level_lbl.setText('')
+                self.parent.inventory_alarm_lbl.setText(f'재고는 충분합니다')
+            time.sleep(2)
+    #스레드의 정지를 위한 메서드
+    def stop(self):
+        self.quit()
+        self.wait(100)  # 5000ms = 5s
+
+
+# UI
 form_class = uic.loadUiType('./smartappg.ui')[0]
+
 
 class Main(QMainWindow, form_class):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+        #기본 페이지 지정 (관리자 페이지)
+        self.login_stackedWidget.setCurrentIndex(5)
+        #상호작용 버튼
         self.see_order_btn.clicked.connect(self.move_order_manage)
         self.inventory_btn.clicked.connect(self.move_inventory)
-        self.login_stackedWidget.setCurrentIndex(5)
         self.admin_page_btn_6.clicked.connect(self.move_admin_page)
         self.admin_page_btn_7.clicked.connect(self.move_admin_page)
         self.admin_page_btn_9.clicked.connect(self.move_admin_page)
-        self.see_not_receive_btn.clicked.connect(self.see_not_received_order)
         self.see_qna_btn.clicked.connect(self.see_qna_manage)
         self.renew_order_manage_btn.clicked.connect(self.renew_order_manage_list)
-        self.order_status_change_btn.clicked.connect(self.order_status_change)
+        self.see_not_receive_btn.clicked.connect(self.see_not_received_order) # 접수되지 않은 주문 확인하기
+        self.order_status_change_btn.clicked.connect(self.order_status_change) # 주문 상태 변경 시켜줌 (주문,접수,완료)
+        # qna창에서 주문번호가 있는 항목 선택하여 버튼 누르면 이동
         self.see_selected_order_btn.clicked.connect(self.see_selected_order)
 
+        self.inventory_cb.currentIndexChanged.connect(self.calculate_min_item) # 최대 개수 계산
+        self.ingredient_order_btn.clicked.connect(self.order_ingredient) #재고 발주
+        self.ira = inventory_renew_alarm(self) # 재고 부족 알림 스레드 생성
+        self.inventorySignal = True
+        self.ira.start() #재고 부족 알림 스레드 시작
 
+    # 재고 부족시 버튼 누를시 부족한 물품 자동발주
+    def order_ingredient(self):
+
+        conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
+                         db='obokmoolsan', charset='utf8')
+        c = conn.cursor()
+        c.execute(f"select * from (select 요리,min(a.남은수량/b.수량) as 최대개수 \
+                    from inventory a inner join bom b on a.재료코드 = b.재료코드 group by 요리) as temp\
+                      order by 최대개수 limit 1")
+        tempitem = c.fetchall()
+        print(tempitem[0][0])
+        # 프로시져 호출하여 최대개수가 1개 이하라면 부족한 물품을 채워줌. SQL 참조 바람.
+        c.execute(f"call check_inventory('{tempitem[0][0]}')")
+        conn.commit()
+        conn.close()
+
+    # 각각 Item별 생산가능 최대개수 계산
+    def calculate_min_item(self):
+        item = self.inventory_cb.currentText() #콤보박스 아이템의 텍스트를 가져옴 (쿼리문에 쓰기위함)
+        #처음 페이지로 이동시에 간장게장이지만 add_item을 통해 콤보박스 물품이 정해져서 임의로 정해둠
+        if item == '':
+            item = '간장게장'
+
+        conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
+                         db='obokmoolsan', charset='utf8')
+        c = conn.cursor()
+        # 각 요리별로 최대 개수 계산 쿼리문  (어쩔수 없이 이중쿼리문을 사용하게 됬다.)
+        c.execute(f"select min(c.d) from (select (a.남은수량 / b.수량)as d \
+                    from inventory a inner join bom b on a.재료코드 = b.재료코드 where 요리 = '{item}') as c")
+        minvalue = c.fetchone()
+        #bom이 등록되지 않은 상황을 대비하기 위해 만든 조건문
+        if minvalue == None:
+            return
+        self.inventory_min_value_lbl.setText(f'{int(minvalue[0])} 개')
+
+    # 주문 완료시 재고 소모 메서드
+    def consume_inventory_item(self):
+        # 현재 선택한 항목의 요리이름을 쿼리문에 사용하기 위하여 가져옴.
+        orderitem = self.order_tableWidget.item(self.order_tableWidget.currentRow(), 1).text()
+        orderqty = self.order_tableWidget.item(self.order_tableWidget.currentRow(), 3).text()
+        conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
+                         db='obokmoolsan', charset='utf8')
+        c = conn.cursor()
+        # 재료 소모 쿼리문
+        c.execute(f"update inventory as a inner join bom as b on a.재료코드 = b.재료코드 \
+                    set a.남은수량 = (a.남은수량 - (b.수량 * {orderqty}))  where b.요리 = '{orderitem}'")
+        conn.commit()
+        conn.close()
+
+    # 문의관리에서 선택한 주문을 주문관리페이지에서 보게해주는 메서드
     def see_selected_order(self):
+        try:
+            #현재 선택한 행의 두번째 항목의 텍스트를 ordernumber로 받는다
+            ordernumber = self.qna_tableWidget.item(self.qna_tableWidget.currentRow(), 1).text()
+        except:
+            return
+        if ordernumber == '':
+            QMessageBox.critical(self, "주문 정보 없음", "주문정보가 없습니다.")
+            return
         self.login_stackedWidget.setCurrentIndex(6)
-        #선택한 행의 가장 첫번쨰 값이 주문번호이므로 이걸 텍스트로 받아와서 SQL 쿼리문에 활용한다.
-        ordernumber = self.qna_tableWidget.item(self.qna_tableWidget.currentRow(), 1).text()
         conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
                          db='obokmoolsan', charset='utf8')
         c = conn.cursor()
@@ -43,9 +147,11 @@ class Main(QMainWindow, form_class):
                 self.order_tableWidget.setItem(j, k, QTableWidgetItem(str(order_manage_list[j][k])))
         for i in range(len(order_manage_list[0])):
             self.order_tableWidget.horizontalHeader().setSectionResizeMode(i, QHeaderView.ResizeToContents)
+
+    #문의관리 항목들을 보여주는 메서드
     def renew_qna_manage_list(self):
         conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
-                          db='obokmoolsan', charset='utf8')
+                         db='obokmoolsan', charset='utf8')
         c = conn.cursor()
         c.execute(f"SELECT * FROM inquiry_manage")
         qna_manage_list = c.fetchall()
@@ -58,24 +164,50 @@ class Main(QMainWindow, form_class):
                 self.qna_tableWidget.setItem(j, k, QTableWidgetItem(str(qna_manage_list[j][k])))
         for i in range(len(qna_manage_list[0])):
             self.qna_tableWidget.horizontalHeader().setSectionResizeMode(i, QHeaderView.ResizeToContents)
+
+    #문의관리 페이지로 이동하는 메서드
     def see_qna_manage(self):
         self.login_stackedWidget.setCurrentIndex(7)
         self.renew_qna_manage_list()
+
+    #주문 상태를 변경해주는 메서드
     def order_status_change(self):
 
         status = self.order_status_change_cb.currentText()
-        if status == '선택 안함' :
+        if status == '선택 안함':
             return
-        #선택한 행의 가장 첫번쨰 값이 주문번호이므로 이걸 텍스트로 받아와서 SQL 쿼리문에 활용한다.
-        ordernumber = self.order_tableWidget.item(self.order_tableWidget.currentRow(), 0).text()
+        try :
+            orderstatus = self.order_tableWidget.item(self.order_tableWidget.currentRow(), 4).text()
+            orderqty = self.order_tableWidget.item(self.order_tableWidget.currentRow(), 3).text()
+            orderitem = self.order_tableWidget.item(self.order_tableWidget.currentRow(), 1).text()
+        #행을 선택하지 않고 버튼 실행했을시 오류를 방지하기위해 Return해줌
+        except :
+            return
+        if orderstatus == '완료':
+            QMessageBox.critical(self, "완료 상품입니다", "완료상태에서는 변경할 수 없습니다.")
+            return
         conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
                          db='obokmoolsan', charset='utf8')
         c = conn.cursor()
+        # 수량이 물품의 제작가능한 최대 개수보다 많으면 return 해버린다 2023.01.18 1225 초안
+        c.execute(f"select min(c.d) from (select (a.남은수량 / b.수량)as d \
+                    from inventory a inner join bom b on a.재료코드 = b.재료코드 where 요리 = '{orderitem}') as c")
+        max_value = c.fetchall()
+        print(max_value)
+        if int(orderqty) > int(max_value[0][0]):
+            QMessageBox.critical(self, "재고 부족", "재고를 주문해주세요.")
+            return
+        # 선택한 행의 가장 첫번쨰 값이 주문번호이므로 이걸 텍스트로 받아와서 SQL 쿼리문에 활용한다.
+        ordernumber = self.order_tableWidget.item(self.order_tableWidget.currentRow(), 0).text()
         c.execute(f"update ordermanage set 상태 = '{status}' where 주문번호 = '{ordernumber}'")
         conn.commit()
         conn.close()
+        if status == '완료':
+            QMessageBox.information(self, "제작 완료", "재고에서 재료가 소모됩니다.")
+            self.consume_inventory_item()
         self.renew_order_manage_list()
 
+    #접수되지 않은 주문리스트를 보는 메서드
     def see_not_received_order(self):
         conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
                          db='obokmoolsan', charset='utf8')
@@ -92,11 +224,16 @@ class Main(QMainWindow, form_class):
         for i in range(len(order_manage_list[0])):
             self.order_tableWidget.horizontalHeader().setSectionResizeMode(i, QHeaderView.ResizeToContents)
 
+    # 관리자 페이지로 이동하는 메서드 #스레드가 다시 시작된다.
     def move_admin_page(self):
         self.login_stackedWidget.setCurrentIndex(5)
+        self.inventorySignal = True
+        self.ira.start()
+
+    # 주문관리 리스트를 갱신해주는 메서드
     def renew_order_manage_list(self):
         conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
-                          db='obokmoolsan', charset='utf8')
+                         db='obokmoolsan', charset='utf8')
         c = conn.cursor()
         c.execute(f"SELECT * FROM ORDERMANAGE")
         order_manage_list = c.fetchall()
@@ -110,12 +247,25 @@ class Main(QMainWindow, form_class):
         for i in range(len(order_manage_list[0])):
             self.order_tableWidget.horizontalHeader().setSectionResizeMode(i, QHeaderView.ResizeToContents)
 
+    #재고관리 페이지로 이동하는 메서드 # 잠시동안 재고 부족 알림 스레드가 중단된다.
     def move_inventory(self):
+        self.inventorySignal = False
+        self.ira.stop()
         self.login_stackedWidget.setCurrentIndex(9)
         self.renew_inventory_list()
+        #현재 등록된 상품 리스트에 따라 콤보박스 아이템들이 결정된다.
+        self.inventory_cb.clear()
+        conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
+                         db='obokmoolsan', charset='utf8')
+        c = conn.cursor()
+        c.execute(f"SELECT * FROM menulist")
+        menu_list = c.fetchall()
+        for i in menu_list:
+            self.inventory_cb.addItem(i[1])
+    # 재고 갱신 메서드
     def renew_inventory_list(self):
         conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
-                          db='obokmoolsan', charset='utf8')
+                         db='obokmoolsan', charset='utf8')
         c = conn.cursor()
         c.execute(f"SELECT * FROM inventory")
         inventory_list = c.fetchall()
@@ -128,352 +278,11 @@ class Main(QMainWindow, form_class):
                 self.inventory_tableWidget.setItem(j, k, QTableWidgetItem(str(inventory_list[j][k])))
         for i in range(len(inventory_list[0])):
             self.inventory_tableWidget.horizontalHeader().setSectionResizeMode(i, QHeaderView.ResizeToContents)
+
+    # 주문관리 페이지로 이동 메서드
     def move_order_manage(self):
         self.login_stackedWidget.setCurrentIndex(6)
         self.renew_order_manage_list()
-
-    def db_connect(self):
-        conn = p.connect(host='wlgur', port=3306, user='root', password='wlgur1234',
-                              db='beaconapp', charset='utf8')
-        # 커서 획득
-        c = conn.cursor()
-        c.execute()
-
-    # 새로운 메세지 알림이 왔을때 클릭시 새로운 메세지를 보낸 채팅방에 바로 들어가도록 해줌.
-    def gotochatting(self):
-        conn = p.connect(host='127.0.0.1', port=3306, user='root', password='00000000',
-                         db='beaconapp', charset='utf8')
-        c = conn.cursor()
-        c.execute(f"select b.* from (select message.*,person.Name from message \
-                        join person on message.id_number = person.id_num\
-                        where message.Receiver = '{self.user_name}') as b \
-                        order by time desc limit 1;")
-        conn.commit()
-        conn.close()
-        tempinfo = c.fetchall()
-
-        self.receiver = f'{tempinfo[0][4]}'  # chat_start() 에 필요한 정보 갱신
-        self.login_SW.setCurrentIndex(5)  # 채팅 페이지로 이동
-        self.chat_start()
-        self.Notification_SW.setCurrentIndex(0)
-
-    def clickchatlist(self):
-        a = self.message_list.currentItem()  # 채팅방 리스트에서 고른 항목을 a라는 변수에 담고
-        b = a.text()  # a의 텍스트를 받아
-        self.receiver = b[0:3]  # b[0:3] 은 이름이다. 다만 이름이 2자거나 4자면 문제가 생김.. 수정이 필요한 부분.
-
-    # 채팅페이지의 채팅방보기를 클릭하면 실행되는 기능으로 마지막 메세지를 기준으로 하여 리스트 생성하게 하려고 함.
-    def see_chatlist(self):
-        self.messageSW.setCurrentIndex(0)  # 채팅방 목록 보이게 함.
-        self.renew_message_list()  # 채팅방 리스트 갱신
-        self.MessageSignal = False  # 스레드의 Run메서드의 While문을 멈추게하기 위하여 Signal을 False로 바꿈
-        self.chat1.stop()  # 채팅 갱신 스레드 멈춤
-        self.chatroomSignal = True  # 채팅방  갱신 스레드의 신호를 True로 바꿈
-        self.chat2.start()  # 채팅방 갱신 스레드 시작
-
-    # 채팅페이지의 상담 시작 버튼을 클릭하면 실행되는 기능으로 채팅창으로 이동하며 콤보박스의 이름에 따라 각 채팅방이 다른것처럼 보이게 함.
-    def chat_start(self):
-        # self.receiver 가 설정되지 않은 상태면 나타나는 메세지
-        if self.receiver == '':
-            QMessageBox.critical(self, "교수 정보 없음", "콤보박스를 선택하거나 채팅방을 더블클릭 해주세요")
-            return
-        self.messageSW.setCurrentIndex(1)  # 채팅페이지에서 채팅을 보여주는 페이지로 이동
-        self.MessageSignal = True  # 채팅 갱신 스레드 시작을 위하여 조건줌
-        self.chat1.start()  # 채팅 갱신 스레드 시작
-        self.chatroomSignal = False  # 채팅방 갱신 스레드 종료를 위하여 조건을 줌
-        self.chat2.stop()  # 채팅방 갱신 스레드 멈춤
-
-    # 메세지를 보내는 기능으로 DB에 저장한다.
-    def sendMessage(self):
-        a = self.chat_lineEdit.text()
-        if a == '':
-            return
-        now = datetime.now()
-        chat_time = now.strftime('%Y-%m-%d %H:%M:%S')
-        self.c.execute(f"Insert into message values ({self.id_num},'{a}','{chat_time}','{self.receiver}')")
-        self.conn.commit()
-        self.chat_lineEdit.clear()
-
-    # 메세지를 불러오는 기능으로 접속한 ID와 Combobox 또는 채팅방 메세지 리스트의 Receiver가 누구냐에 따라 채팅방 불러옴.
-    def renew_chat_textBrowser(self):
-        self.chat_textBrowser.clear()
-        self.c.execute(f"select message.*,person.Name from message join person on message.id_number = person.id_num \
-                            where (person.Name = '{self.receiver}' and message.Receiver = '{self.user_name}') or \
-                            (message.Receiver = '{self.receiver}'  and person.Name = '{self.user_name}') order by time")
-        chatlist = self.c.fetchall()
-        for i in chatlist:
-            self.chat_textBrowser.append(f'{i[2]}\n \n {i[4]} : {i[1]}\n')
-
-    # 채팅방을 불러오는 기능
-    def renew_message_list(self):
-        self.message_list.clear()
-        self.c.execute(f"select a.* from (select message.*,person.name from message \
-                        join person on message.id_number = person.id_num where (id_number, Time) \
-                        in (select id_number, max(Time) as Time from message group by id_number)\
-                        order by Time)  as a where receiver ='{self.user_name}'")
-        message_room_list = self.c.fetchall()
-        for i in message_room_list:
-            self.message_list.addItem(f'{i[4]}\n {i[1]}')  # i[4]는 보낸사람의 이름 i[1]은 보낸사람의 마지막 메세지
-
-    # 출결현황 페이지로 이동하며 출석 / 지각 등의 정보를 표시해준다.
-    def moveAtt_presentPage(self):
-        self.login_SW.setCurrentIndex(7)
-        self.make_Att_present()
-
-    # 비콘 출석페이지로 이동
-    def moveAttendPage(self):
-        if self.Signal_login == False:
-            QMessageBox.critical(self, "로그인 정보 없음", "로그인해주세요")
-            return
-        if self.id_num > 90:
-            QMessageBox.critical(self, "출석대상이 아님", "출석대상이 아닙니다")
-            return
-        self.login_SW.setCurrentIndex(6)
-        self.traininginfocheck()
-
-    # 채팅페이지로 이동
-    def moveChattingPage(self):
-        if self.Signal_login == False:
-            QMessageBox.critical(self, "로그인 정보 없음", "로그인해주세요")
-            return
-        self.login_SW.setCurrentIndex(5)
-        self.messageSW.setCurrentIndex(0)
-        self.renew_message_list()
-        self.chatroomSignal = True
-        self.chat2.start()
-
-    # 일정 페이지로 이동
-    def moveSchedulePage(self):
-        if self.Signal_login == False:
-            QMessageBox.critical(self, "로그인 정보 없음", "로그인해주세요")
-            return
-        self.login_SW.setCurrentIndex(2)
-
-    # 일정페이지 내에서 일정 보기로 이동
-    def moveScheduleViewPage(self):
-        self.login_SW.setCurrentIndex(4)
-        self.scheduleView()
-
-    # 메인페이지로 이동
-    def moveMainpage(self):
-        self.login_SW.setCurrentIndex(0)
-        # 스레드 중지를 위하여 설정
-        self.MessageSignal = False
-        self.chat1.stop()
-        self.chatroomSignal = False
-        self.chat2.stop()
-
-    # 로그인 페이지로 이동
-    def moveLoginPage(self):
-        self.login_SW.setCurrentIndex(1)
-
-    # 출결현황 페이지 - 쿼리문을 사용했어야 했는데 익숙치못해서 리스트 사용함. 조건문의 수정이 필요하다.
-    def make_Att_present(self):
-
-        progress_info = self.c.execute(f"select a.*,b.수업시간,b.시작시간 from person_info as a \
-                        join class_schedule as b on a.Date = b.훈련일자 where a.id_num = {self.id_num} and a.Date != curdate()")
-
-        attendance = self.c.execute(f"SELECT * from person_info \
-                    where (((Excursion is not null and timediff(Leave_time,Entrance)-timediff(comeback,excursion) >040000) \
-                    or (Excursion is null and timediff(Leave_time,Entrance) >040000) )and Entrance is not null and \
-                    Leave_time is not null) and id_num = {self.id_num} and Date != curdate()")
-
-        late = self.c.execute(f"SELECT * from person_info where (DATE_FORMAT(entrance, '%H:%i:%s')  > '09:20:59') \
-                                and id_num = {self.id_num} and Date != curdate() and ((timediff(Leave_time,Entrance)>040000)\
-                                or (timediff(Leave_time,Entrance)-timediff(Excursion,Comeback) >040000))")
-
-        earlyleave = self.c.execute(f"SELECT * from person_info where DATE_FORMAT(Leave_time,'%H:%i:%s')  < '17:00:00' \
-                                    and id_num = {self.id_num} and Date != curdate() \
-                                    and (timediff(Leave_time,Entrance) > 040000 \
-                                    or timediff(timediff(Leave_time,Entrance),timediff(Comeback,excursion)) > 040000)")
-
-        out = self.c.execute(f"SELECT * from person_info where Excursion is not null and id_num = {self.id_num} \
-                                and Date != curdate() and timediff(Leave_time,Entrance)-timediff(comeback,excursion) >040000")
-
-        absence = self.c.execute(f"SELECT * from person_info where ((Excursion is not null \
-                                and timediff(Leave_time,Entrance)-timediff(comeback,excursion) <040000) \
-                                or timediff(Leave_time,Entrance) < 040000 or Entrance is null or Leave_time is null) \
-                                and id_num = {self.id_num} and Date != curdate()")
-
-        # for문에서 정해진 출결현황에 따라 라벨 및 프로그레스바 등을 바꿔줌.
-        self.attendance_lbl.setText(f'{attendance}')
-        self.late_lbl.setText(f'{late}')
-        self.earlyleave_lbl.setText(f'{earlyleave}')
-        self.out_lbl.setText(f'{out}')
-        self.absence_lbl.setText(f'{absence}')
-        attendance_ratio = attendance / 140
-        self.my_attendance_ratio_lbl.setText(f'({round(attendance_ratio * 100, 2)}% \t {attendance}/140일)')
-        self.my_attendance_ratio_pB.setValue(int(attendance_ratio * 100))
-        progress_ratio = progress_info / 140
-        self.process_progress_ratio_lbl.setText(f'({round(progress_ratio * 100, 2)}% \t {progress_info}/140일)')
-        self.process_progress_ratio_pB.setValue(int(progress_ratio * 100))
-
-    # 입실 시간 기록
-    def recordJointime(self):
-        now = datetime.now()
-
-        date = now.date()
-        jointime = now.strftime('%Y-%m-%d %H:%M:%S')
-        self.c.execute(f"update person_info set entrance  = '{jointime}' where namedate = '{self.user_name}{date}'")
-        self.conn.commit()
-        self.traininginfocheck()
-
-    # 퇴실 시간 기록
-    def recordLeavetime(self):
-        now = datetime.now()
-        date = now.date()
-        leavetime = now.strftime('%Y-%m-%d %H:%M:%S')
-        self.c.execute(f"update person_info set Leave_time  = '{leavetime}' where namedate = '{self.user_name}{date}'")
-        self.conn.commit()
-        self.traininginfocheck()
-
-    # 외출 시간 기록
-    def recordExcursiontime(self):
-        now = datetime.now()
-        date = now.date()
-        excursion = now.strftime('%Y-%m-%d %H:%M:%S')
-        self.c.execute(f"update person_info set excursion  = '{excursion}'where namedate = '{self.user_name}{date}'")
-        self.conn.commit()
-        self.traininginfocheck()
-
-    # 복귀 시간 기록
-    def recordComebacktime(self):
-        now = datetime.now()
-        date = now.date()
-        comeback = now.strftime('%Y-%m-%d %H:%M:%S')
-        self.c.execute(f"update person_info set Comeback  = '{comeback}'where namedate = '{self.user_name}{date}'")
-        self.conn.commit()
-        self.traininginfocheck()
-
-    # 당일 시간 기록에 따라 출결페이지의 버튼들의 stackwidget을 바꿔주고 라벨의 텍스트를 바꿔준다.
-    def traininginfocheck(self):
-
-        now = datetime.now()
-        date = now.date()
-        self.c.execute(f"select * from class_schedule where 훈련일자 = '{date}'")
-        todaytraining = self.c.fetchall()
-        if todaytraining == () :
-            todaytraining_start = ''
-            todaytraining_end = ''
-        else :
-            todaytraining_start = todaytraining[0][2]
-            todaytraining_end = todaytraining[0][3]
-        self.today_training_lbl.setText(f'{todaytraining_start} ~{todaytraining_end}')
-        self.c.execute(f"select * from person_info where id_num = {self.id_num} and date = '{date}'")
-        traininginfo = self.c.fetchall()
-
-        if traininginfo[0][2] == None:
-            self.training_infoSW.setCurrentIndex(0)
-            self.training_btnSW.setCurrentIndex(0)
-            self.training_btnSW2.setCurrentIndex(0)
-            self.Join_lbl.setText('')
-            self.Leave_lbl.setText('')
-            self.Comeback_lbl.setText('')
-            self.Out_lbl.setText('')
-
-        elif traininginfo[0][2] != None and traininginfo[0][3] == None:
-            self.training_infoSW.setCurrentIndex(1)
-            self.training_btnSW.setCurrentIndex(2)
-            self.training_btnSW2.setCurrentIndex(1)
-            self.Join_lbl.setText(f'{traininginfo[0][2].strftime("%H:%M:%S")}')
-            self.Leave_lbl.setText('')
-            if traininginfo[0][5] == None:
-                self.Out_lbl.setText('')
-                self.Comeback_lbl.setText('')
-            else:
-                self.Out_lbl.setText(f'{traininginfo[0][5].strftime("%H:%M:%S")}')
-                self.training_btnSW.setCurrentIndex(1)
-                self.training_btnSW2.setCurrentIndex(0)
-                if traininginfo[0][4] == None:
-                    self.Comeback_lbl.setText('')
-                else:
-                    self.Comeback_lbl.setText(f'{traininginfo[0][4].strftime("%H:%M:%S")}')
-                    self.training_btnSW.setCurrentIndex(2)
-                    self.training_btnSW2.setCurrentIndex(0)
-
-        elif traininginfo[0][2] != None and traininginfo[0][3] != None:
-            self.training_infoSW.setCurrentIndex(2)
-            self.training_btnSW.setCurrentIndex(3)
-            self.training_btnSW2.setCurrentIndex(0)
-            self.Join_lbl.setText(f'{traininginfo[0][2].strftime("%H:%M:%S")}')
-            self.Leave_lbl.setText(f'{traininginfo[0][3].strftime("%H:%M:%S")}')
-            if traininginfo[0][5] == None:
-                self.Out_lbl.setText('')
-                self.Comeback_lbl.setText('')
-            else:
-                self.Out_lbl.setText(f'{traininginfo[0][5].strftime("%H:%M:%S")}')
-                if traininginfo[0][4] == None:
-                    self.Comeback_lbl.setText('')
-                else:
-                    self.Comeback_lbl.setText(f'{traininginfo[0][4].strftime("%H:%M:%S")}')
-
-    # 일정 보기 기능
-    def scheduleView(self):
-        self.schedule_listView.clear()
-        self.c.execute(f"SELECT * From Schedule Inner Join  person on person.id_num = schedule.id_num \
-                        Where date = '{self.datestring}'")
-        schedulelist = self.c.fetchall()
-
-        for i in range(len(schedulelist)):
-            self.schedule_listView.addItem(f'{schedulelist[i][8]}\n {schedulelist[i][2]}')
-
-    # 일정 선택
-    def scheduleclick(self):
-        self.date = self.scheduleCalendar.selectedDate()
-        self.datestring = self.date.toString("yyyy-MM-dd")
-
-        self.selectedDate_lbl1.setText(self.date.toString("yyyy-MM-dd"))
-        self.selectedDate_lbl2.setText(self.date.toString("yyyy-MM-dd"))
-
-    # 일정 추가 페이지로 이동
-    def moveScheduleAddPage(self):
-        self.login_SW.setCurrentIndex(3)
-
-    # 일정 추가 기능
-    def scheduleAdd(self):
-        schedule_contents = self.schedule_textEdit.toPlainText()
-        self.c.execute(
-            f"INSERT INTO Schedule VALUES ('{self.INFO_login[0][0]}','{self.datestring}','{schedule_contents}')")
-        self.conn.commit()
-        self.schedule_textEdit.clear()
-
-    # 로그인
-    def login_Check(self):
-        if self.login_id_lineEdit.text() == "":
-            QMessageBox.critical(self, "로그인 오류", "정보를 입력하세요")
-            return
-        self.id = self.login_id_lineEdit.text()
-        pw = self.login_pw_lineEdit.text()
-        self.c.execute(f"SELECT * FROM person WHERE ID = '{self.id}'")
-        self.INFO_login = self.c.fetchall()
-        if self.INFO_login == ():
-            QMessageBox.critical(self, "로그인 오류", "ID 정보가 없습니다. 회원가입 해주세요")
-            return
-        self.id_num = self.INFO_login[0][0]
-        self.user_name = self.INFO_login[0][5]
-        now = datetime.now()
-        date = now.date()
-        if pw == '':
-            QMessageBox.critical(self, "로그인 오류", "비밀번호를 입력하세요")
-        elif pw not in self.INFO_login[0]:
-            QMessageBox.critical(self, "로그인 오류", "비밀번호를 다시 입력하세요")
-        else:
-            self.Signal_login = True
-            self.login_SW.setCurrentIndex(0)
-            self.login_id_lineEdit.clear()
-            self.login_pw_lineEdit.clear()
-            self.Stack_W_login.setCurrentIndex(1)
-            self.logon_label.setText(f"{self.user_name}님 안녕하세요")
-            self.numofmessage = self.c.execute(f"select a.* from (select message.*,person.name from message \
-                            join person on message.id_number = person.id_num \
-                            where message.Receiver = '{self.user_name}') as a")
-
-            self.c.execute(f"Insert into person_info (id_Num,Name,Date,NameDate) values \
-                            ({self.id_num},'{self.user_name}','{date}','{self.user_name}{date}')\
-                            on duplicate key update Name = '{self.user_name}', Date = '{date}'")
-            self.conn.commit()
-            self.signal = True
-            self.notification.start()
 
     # 로그아웃
     def logout(self):
