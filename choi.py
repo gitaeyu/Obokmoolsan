@@ -3,9 +3,11 @@ import time
 import ast
 import pymysql as p
 import matplotlib
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import QDate, QTime
 from PyQt5.QtCore import *
+from PyQt5 import *
+from PyQt5.QtGui import QIntValidator # 큐인트
 from PyQt5.QtWidgets import *
 from PyQt5 import uic
 
@@ -47,6 +49,17 @@ class Smart_App(QMainWindow, form_class):
         self.admin_page_btn_8.clicked.connect(self.admin_page)
         self.admin_page_btn_9.clicked.connect(self.admin_page)
         self.admin_page_btn_10.clicked.connect(self.admin_page)
+        #테스트 페이지로
+        self.Testpage_btn.clicked.connect(self.move_test_page)
+        #사용자 주문하기
+        self.order_btn.clicked.connect(self.user_order)
+        # validator = QIntValidator(0,100,self) # 정수만 입력가능
+        # self.count_lineEdit.setValidator(QIntValidator(1,100,self)) # 정수만 입력가능  그런데 범위를 지정 해줫는데 범위를 벗어난 3자리 정수도 입력이됨 ??????
+        self.user_order_item_btn.clicked.connect(self.select_menu)
+        # self.menu_comboBox.currentTextChanged.connect(self.change_num)# 콤보박스 선택 글자 바뀌면 최대개수 바뀜
+        self.menu_comboBox.currentTextChanged.connect(self.change_num)
+
+
 
 # #=================================기태======================================
         #기본 페이지 지정 (관리자 페이지)
@@ -76,6 +89,9 @@ class Smart_App(QMainWindow, form_class):
         self.inventorySignal = True
         self.ira.start() #재고 부족 알림 스레드 시작
 #====================================기태====================================================
+    def move_test_page(self):
+        self.login_stackedWidget.setCurrentIndex(11)
+
     # 재고 부족시 버튼 누를시 부족한 물품 자동발주
     def order_ingredient(self):
 
@@ -278,6 +294,78 @@ class Smart_App(QMainWindow, form_class):
         self.renew_order_manage_list()
 ##==========================================기태 ====================================================
 ##====================================지혁==========================================================
+    def user_order(self):# 주문하기 버튼 눌럿을때
+        self.login_stackedWidget.setCurrentIndex(3)
+        # validator=QIntValidator(self)
+        # self.count_lineEdit.setValidator(validator) # QlineEdit에 숫자만 입력
+        conn = p.connect(host="10.10.21.105", user="wlgur", password="chlwlgur1234", db="obokmoolsan", charset="utf8")
+        c = conn.cursor()
+        self.menu_comboBox.clear()
+        c.execute(f"SELECT 메뉴명 FROM menulist")
+        menu_list=c.fetchall()
+        for i in menu_list:
+            self.menu_comboBox.addItem(i[0])
+
+        c.execute("SELECT A.메뉴코드, A.재료이름, A.수량, A.재료이름, A.재료코드, B.재료코드, B.재료이름, B.남은수량 FROM bom A INNER JOIN inventory B ON A.재료코드 = B.재료코드");
+        # c.execute("CREATE VIEW OBOKMOOLSAN.MAX_MENU AS SELECT A.메뉴코드, A.재료이름, A.수량, A.재료코드, B.남은수량, B.남은수량/A.수량 AS 최대개수 FROM bom A INNER JOIN inventory B ON A.재료코드 = B.재료코드");
+        c.execute("SELECT *FROM MAX_MENU");
+        max_num = c.fetchall()
+        print(max_num)
+        c.execute(f"SELECT 메뉴코드 FROM menulist WHERE 메뉴명 = '{self.menu_comboBox.currentText()}'")
+        find_code = c.fetchall()
+        print(find_code,'gdgddg')
+        c.execute(f"SELECT MIN(최대개수) FROM max_menu WHERE 메뉴코드='{find_code[0][0]}'");
+        max_order = c.fetchone()
+        print(max_order[0])
+        # self.count_lineEdit.setValidator(QIntValidator(1,int(max_order[0]),self))  # 정수만 입력가능  그런데 범위를 지정 해줫는데 범위를 벗어난 3자리 정수도 입력이됨 ??????
+        for i in range(1, int(max_order[0])+1):
+            self.maxmenu_comboBox.addItem(str(i))
+
+        # max_order=c.fetchone()
+        # print(max_order)
+        conn.close()
+    #
+    def change_num(self): #  메뉴 선택 바뀌작동
+        self.maxmenu_comboBox.clear()
+        conn = p.connect(host="10.10.21.105", user="wlgur", password="chlwlgur1234", db="obokmoolsan", charset="utf8")
+        c = conn.cursor()
+        c.execute(f"SELECT 메뉴코드 FROM menulist WHERE 메뉴명 = '{self.menu_comboBox.currentText()}'")
+        find_code2 = c.fetchall()
+        print(find_code2)
+        c.execute("SELECT *FROM ordermanage");
+        self.compare_order1=c.fetchall()
+        if find_code2 == ():
+            pass
+        else:
+            c.execute(f"SELECT MIN(최대개수) FROM max_menu WHERE 메뉴코드='{find_code2[0][0]}'");
+            max_order2 = c.fetchone()
+            print(max_order2)
+            for i in range(1, int(max_order2[0])+1):
+                self.maxmenu_comboBox.addItem(str(i))
+        conn.close()
+
+
+
+
+    def select_menu(self):
+        conn = p.connect(host="10.10.21.105", user="wlgur", password="chlwlgur1234", db="obokmoolsan", charset="utf8")
+        c = conn.cursor()
+
+        print(self.compare_order1,'비교1')
+        c.execute("SELECT DATE_FORMAT(now(), '%Y-%m-%d')");
+        order_date=c.fetchall()
+        c.execute(f"SELECT 메뉴코드 FROM menulist WHERE 메뉴명 = '{self.menu_comboBox.currentText()}'");
+        self.input_code=c.fetchall()
+        c.execute(f"INSERT INTO ordermanage (메뉴명, 주문ID, 수량, 상태, 취소여부, 메뉴코드, 날짜) VALUES ('{self.menu_comboBox.currentText()}','{self.id_lineEdit.text()}',"
+                  f"'{self.maxmenu_comboBox.currentText()}', '주문', 'N', '{self.input_code[0][0]}','{order_date[0][0]}')");
+        c.execute("SELECT *FROM ordermanage");
+        self.compare_order2=c.fetchall()
+        print(self.compare_order2,'비교2')
+        conn.commit()
+        conn.close()
+        h2=Alarm_Order(self)
+        h2.start()
+
     def bom_page(self): # bom으로 이동
         self.add_code_comboBox.clear()
         self.login_stackedWidget.setCurrentIndex(8)
@@ -507,6 +595,21 @@ class inventory_renew_alarm(QThread):
         self.quit()
         self.wait(100)  # 5000ms = 5s
 
+
+class Alarm_Order(QThread):
+    def __init__(self,parent):
+        super().__init__(parent)
+        self.parent=parent
+
+    def run(self):
+        print('쓰레드 알림창')
+        time.sleep(2)
+        while True:
+            if self.parent.compare_order1 != self.parent.compare_order2:
+                self.parent.order_alarm_lbl.setText('주문도착')
+                time.sleep(3)
+            else:
+                break
 
 if __name__=="__main__":
     app=QApplication(sys.argv)
