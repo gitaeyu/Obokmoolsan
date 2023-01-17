@@ -1341,6 +1341,112 @@
      </property>
     </widget>
    </widget>
+   <widget class="QWidget" name="page_12">
+    <widget class="QLineEdit" name="add_price_lineEdit">
+     <property name="geometry">
+      <rect>
+       <x>300</x>
+       <y>120</y>
+       <width>113</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="placeholderText">
+      <string>가격</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="adding_menu_btn">
+     <property name="geometry">
+      <rect>
+       <x>430</x>
+       <y>120</y>
+       <width>75</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>상품등록</string>
+     </property>
+    </widget>
+    <widget class="QTableWidget" name="add_menu_tableWidget">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>170</y>
+       <width>481</width>
+       <height>241</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="admin_page_btn_10">
+     <property name="geometry">
+      <rect>
+       <x>390</x>
+       <y>30</y>
+       <width>101</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>관리자 페이지로</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="inventory_label_2">
+     <property name="geometry">
+      <rect>
+       <x>120</x>
+       <y>30</y>
+       <width>231</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:24pt;&quot;&gt;상품등록&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="page10">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>30</y>
+       <width>71</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;page10&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="add_menuname_lineEdit">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>120</y>
+       <width>113</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="placeholderText">
+      <string>메뉴명</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="add_menucode_lineEdit">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>120</y>
+       <width>113</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="maxLength">
+      <number>4</number>
+     </property>
+     <property name="placeholderText">
+      <string>메뉴코드</string>
+     </property>
+    </widget>
+   </widget>
    <widget class="QWidget" name="page_11">
     <widget class="QLabel" name="label_2">
      <property name="geometry">
@@ -1492,7 +1598,7 @@
       <string>Start</string>
      </property>
     </widget>
-    <widget class="QPushButton" name="admin_page_btn_10">
+    <widget class="QPushButton" name="admin_page_btn_11">
      <property name="geometry">
       <rect>
        <x>410</x>
