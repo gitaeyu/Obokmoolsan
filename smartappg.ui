@@ -1091,63 +1091,20 @@
       </rect>
      </property>
     </widget>
-    <widget class="QComboBox" name="ingredient_name_comboBox">
+    <widget class="QPushButton" name="ingredient_order_btn">
      <property name="geometry">
       <rect>
-       <x>10</x>
-       <y>460</y>
-       <width>76</width>
-       <height>22</height>
-      </rect>
-     </property>
-     <item>
-      <property name="text">
-       <string>재료이름</string>
-      </property>
-     </item>
-    </widget>
-    <widget class="QComboBox" name="ingredient_code_comboBox">
-     <property name="geometry">
-      <rect>
-       <x>90</x>
-       <y>460</y>
-       <width>76</width>
-       <height>22</height>
-      </rect>
-     </property>
-     <item>
-      <property name="text">
-       <string>재료코드</string>
-      </property>
-     </item>
-    </widget>
-    <widget class="QLineEdit" name="lineEdit">
-     <property name="geometry">
-      <rect>
-       <x>180</x>
-       <y>460</y>
-       <width>111</width>
-       <height>21</height>
-      </rect>
-     </property>
-     <property name="placeholderText">
-      <string>추가 할 수량 입력</string>
-     </property>
-    </widget>
-    <widget class="QPushButton" name="add_btn">
-     <property name="geometry">
-      <rect>
-       <x>320</x>
-       <y>460</y>
-       <width>75</width>
-       <height>23</height>
+       <x>400</x>
+       <y>340</y>
+       <width>141</width>
+       <height>101</height>
       </rect>
      </property>
      <property name="text">
-      <string>입력</string>
+      <string>필요 물품 자동 발주</string>
      </property>
     </widget>
-    <widget class="QComboBox" name="comboBox">
+    <widget class="QComboBox" name="inventory_cb">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -1191,6 +1148,42 @@
      </property>
      <property name="text">
       <string>관리자 페이지로</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="inventory_min_value_lbl">
+     <property name="geometry">
+      <rect>
+       <x>210</x>
+       <y>360</y>
+       <width>231</width>
+       <height>71</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>20</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+    <widget class="QLabel" name="inventory_alarm_level_lbl">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>450</y>
+       <width>251</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>13</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string/>
      </property>
     </widget>
    </widget>

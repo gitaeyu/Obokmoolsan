@@ -6,6 +6,39 @@ from PyQt5 import uic, QtGui
 from datetime import datetime
 import time
 
+
+
+# 채팅 갱신 스레드
+class inventory_renew_alarm(QThread):
+    def __init__(self, parent):
+        super().__init__()
+        self.parent = parent
+
+    def run(self):
+        while self.parent.inventorySignal:
+            conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
+                             db='obokmoolsan', charset='utf8')
+            c = conn.cursor()
+            c.execute(f"select * from (select 요리,min(a.남은수량/b.수량) as 최소개수 \
+                        from inventory a inner join bom b on a.재료코드 = b.재료코드 group by 요리) as temp\
+                          order by 최소개수 limit 1")
+            min_value = c.fetchall()
+            conn.commit()
+            conn.close()
+            print(min_value)
+
+            time.sleep(0.5)
+            if int(min_value[0][1]) < 1 :
+                self.parent.inventory_alarm_level_lbl.setText(f'{min_value[0][0]}의 재료가 부족합니다')
+            else:
+                self.parent.inventory_alarm_level_lbl.setText('')
+            time.sleep(2)
+
+
+    def stop(self):
+        self.quit()
+        self.wait(100)  # 5000ms = 5s
+
 form_class = uic.loadUiType('./smartappg.ui')[0]
 
 class Main(QMainWindow, form_class):
@@ -23,12 +56,61 @@ class Main(QMainWindow, form_class):
         self.renew_order_manage_btn.clicked.connect(self.renew_order_manage_list)
         self.order_status_change_btn.clicked.connect(self.order_status_change)
         self.see_selected_order_btn.clicked.connect(self.see_selected_order)
+        self.inventory_cb.currentIndexChanged.connect(self.calculate_min_item)
+        self.ingredient_order_btn.clicked.connect(self.order_ingredient)
+        self.ira = inventory_renew_alarm(self)
+
+    def order_ingredient(self):
+        conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
+                         db='obokmoolsan', charset='utf8')
+        c = conn.cursor()
+        c.execute(f"select * from (select 요리,min(a.남은수량/b.수량) as 최소개수 \
+                    from inventory a inner join bom b on a.재료코드 = b.재료코드 group by 요리) as temp\
+                      order by 최소개수 limit 1")
+        tempitem = c.fetchall()
+        # 프로시져 호출하여 최소개수가 1개 이하라면 부족한 물품을 채워줌.
+        c.execute(f"call check_inventory({tempitem[0][0]})")
+        conn.commit()
+        conn.close()
+
+
+    def calculate_min_item(self):
+        item = self.inventory_cb.currentText()
+        if item == '' :
+            item = '간장게장'
+        conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
+                         db='obokmoolsan', charset='utf8')
+        c = conn.cursor()
+
+        c.execute(f"select min(c.d) from (select (a.남은수량 / b.수량)as d \
+                    from inventory a inner join bom b on a.재료코드 = b.재료코드 where 요리 = '{item}') as c;")
+        minvalue = c.fetchone()
+        if minvalue == None :
+            return
+        self.inventory_min_value_lbl.setText(f'{int(minvalue[0])} 개')
+
+
+    def consume_inventory_item(self):
+        orderitem = self.order_tableWidget.item(self.order_tableWidget.currentRow(), 1).text()
+        conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
+                         db='obokmoolsan', charset='utf8')
+        c = conn.cursor()
+        c.execute(f"update inventory as a inner join bom as b on a.재료코드 = b.재료코드 \
+                    set a.남은수량 = (a.남은수량 - b.수량)  where b.요리 = '{orderitem}'")
+        conn.commit()
+        conn.close()
 
 
     def see_selected_order(self):
-        self.login_stackedWidget.setCurrentIndex(6)
         #선택한 행의 가장 첫번쨰 값이 주문번호이므로 이걸 텍스트로 받아와서 SQL 쿼리문에 활용한다.
-        ordernumber = self.qna_tableWidget.item(self.qna_tableWidget.currentRow(), 1).text()
+        try :
+            ordernumber = self.qna_tableWidget.item(self.qna_tableWidget.currentRow(), 1).text()
+        except:
+            return
+        if ordernumber == '' :
+            QMessageBox.critical(self, "주문 정보 없음", "주문정보가 없습니다.")
+            return
+        self.login_stackedWidget.setCurrentIndex(6)
         conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
                          db='obokmoolsan', charset='utf8')
         c = conn.cursor()
@@ -66,6 +148,9 @@ class Main(QMainWindow, form_class):
         status = self.order_status_change_cb.currentText()
         if status == '선택 안함' :
             return
+        orderstatus = self.order_tableWidget.item(self.order_tableWidget.currentRow(), 4).text()
+        if orderstatus == '완료' :
+            QMessageBox.critical(self, "완료 상품입니다", "완료상태에서는 변경할 수 없습니다.")
         #선택한 행의 가장 첫번쨰 값이 주문번호이므로 이걸 텍스트로 받아와서 SQL 쿼리문에 활용한다.
         ordernumber = self.order_tableWidget.item(self.order_tableWidget.currentRow(), 0).text()
         conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
@@ -74,6 +159,9 @@ class Main(QMainWindow, form_class):
         c.execute(f"update ordermanage set 상태 = '{status}' where 주문번호 = '{ordernumber}'")
         conn.commit()
         conn.close()
+        if status == '완료' :
+            QMessageBox.information(self, "제작 완료", "재고에서 재료가 소모됩니다.")
+            # self.consume_inventory_item()
         self.renew_order_manage_list()
 
     def see_not_received_order(self):
@@ -94,6 +182,8 @@ class Main(QMainWindow, form_class):
 
     def move_admin_page(self):
         self.login_stackedWidget.setCurrentIndex(5)
+        self.inventorySignal = False
+        self.ira.stop()
     def renew_order_manage_list(self):
         conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
                           db='obokmoolsan', charset='utf8')
@@ -111,8 +201,20 @@ class Main(QMainWindow, form_class):
             self.order_tableWidget.horizontalHeader().setSectionResizeMode(i, QHeaderView.ResizeToContents)
 
     def move_inventory(self):
+        self.inventorySignal = True
+        self.ira.start()
         self.login_stackedWidget.setCurrentIndex(9)
         self.renew_inventory_list()
+        self.inventory_cb.clear()
+        conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
+                          db='obokmoolsan', charset='utf8')
+        c = conn.cursor()
+        c.execute(f"SELECT * FROM menulist")
+        menu_list = c.fetchall()
+        for i in menu_list:
+            self.inventory_cb.addItem(i[1])
+
+
     def renew_inventory_list(self):
         conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
                           db='obokmoolsan', charset='utf8')
