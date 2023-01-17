@@ -102,7 +102,7 @@ class Main(QMainWindow, form_class):
         c = conn.cursor()
         # 각 요리별로 최대 개수 계산 쿼리문  (어쩔수 없이 이중쿼리문을 사용하게 됬다.)
         c.execute(f"select min(c.d) from (select (a.남은수량 / b.수량)as d \
-                    from inventory a inner join bom b on a.재료코드 = b.재료코드 where 요리 = '{item}') as c;")
+                    from inventory a inner join bom b on a.재료코드 = b.재료코드 where 요리 = '{item}') as c")
         minvalue = c.fetchone()
         #bom이 등록되지 않은 상황을 대비하기 위해 만든 조건문
         if minvalue == None:
@@ -179,23 +179,33 @@ class Main(QMainWindow, form_class):
             return
         try :
             orderstatus = self.order_tableWidget.item(self.order_tableWidget.currentRow(), 4).text()
+            orderqty = self.order_tableWidget.item(self.order_tableWidget.currentRow(), 3).text()
+            orderitem = self.order_tableWidget.item(self.order_tableWidget.currentRow(), 1).text()
         #행을 선택하지 않고 버튼 실행했을시 오류를 방지하기위해 Return해줌
         except :
             return
         if orderstatus == '완료':
             QMessageBox.critical(self, "완료 상품입니다", "완료상태에서는 변경할 수 없습니다.")
             return
-        # 선택한 행의 가장 첫번쨰 값이 주문번호이므로 이걸 텍스트로 받아와서 SQL 쿼리문에 활용한다.
-        ordernumber = self.order_tableWidget.item(self.order_tableWidget.currentRow(), 0).text()
         conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
                          db='obokmoolsan', charset='utf8')
         c = conn.cursor()
+        # 수량이 물품의 제작가능한 최대 개수보다 많으면 return 해버린다 2023.01.18 1225 초안
+        c.execute(f"select min(c.d) from (select (a.남은수량 / b.수량)as d \
+                    from inventory a inner join bom b on a.재료코드 = b.재료코드 where 요리 = '{orderitem}') as c")
+        max_value = c.fetchall()
+        print(max_value)
+        if int(orderqty) > int(max_value[0][0]):
+            QMessageBox.critical(self, "재고 부족", "재고를 주문해주세요.")
+            return
+        # 선택한 행의 가장 첫번쨰 값이 주문번호이므로 이걸 텍스트로 받아와서 SQL 쿼리문에 활용한다.
+        ordernumber = self.order_tableWidget.item(self.order_tableWidget.currentRow(), 0).text()
         c.execute(f"update ordermanage set 상태 = '{status}' where 주문번호 = '{ordernumber}'")
         conn.commit()
         conn.close()
         if status == '완료':
             QMessageBox.information(self, "제작 완료", "재고에서 재료가 소모됩니다.")
-            self.consume_inventory_item()  # 아직 실행안해봄 ㅎ.. 주문등록 테스트 기능 만들고 테스트 예정
+            self.consume_inventory_item()
         self.renew_order_manage_list()
 
     #접수되지 않은 주문리스트를 보는 메서드
