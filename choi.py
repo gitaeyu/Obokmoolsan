@@ -17,8 +17,6 @@ class Smart_App(QMainWindow, form_class):
         super().__init__()
         self.setupUi(self)
         self.login_stackedWidget.setCurrentIndex(0)
-
-
         #회원가입 및 로그인 관련
         self.signup_btn.clicked.connect(self.signup) # 회원가입창으로
         self.sign_in_btn.clicked.connect(self.signin) # 가입하기버튼 눌렀을때
@@ -30,26 +28,22 @@ class Smart_App(QMainWindow, form_class):
         #로그아웃
         self.user_logout_btn.clicked.connect(self.log_out)
         self.admin_logout_btn.clicked.connect(self.log_out)
-
         #관리자 관련
         self.add_menu_btn.clicked.connect(self.menu_add)# 상품등록 페이지로
         self.adding_menu_btn.clicked.connect(self.plus_menu)# #상품등록 버튼
         self.insert_btn.clicked.connect(self.add_bom)# bom등록하기
-
         #관리자 페이지에서 이동
         self.bom_btn.clicked.connect(self.bom_page) # bom 창으로 이동
-
         #사용자 페이지로 이동
         self.user_page_btn3.clicked.connect(self.user_page)
         self.user_page_btn4.clicked.connect(self.user_page)
-
         #관리자 페이지로 이등
-        self.admin_page_btn_6.clicked.connect(self.admin_page)
-        self.admin_page_btn_7.clicked.connect(self.admin_page)
-        self.admin_page_btn_8.clicked.connect(self.admin_page)
-        self.admin_page_btn_9.clicked.connect(self.admin_page)
-        self.admin_page_btn_10.clicked.connect(self.admin_page)
-         jihyeok
+        self.admin_page_btn_6.clicked.connect(self.move_admin_page)
+        self.admin_page_btn_7.clicked.connect(self.move_admin_page)
+        self.admin_page_btn_8.clicked.connect(self.move_admin_page)
+        self.admin_page_btn_9.clicked.connect(self.move_admin_page)
+        self.admin_page_btn_10.clicked.connect(self.move_admin_page)
+        self.admin_page_btn_11.clicked.connect(self.move_admin_page)
         #테스트 페이지로
         self.Testpage_btn.clicked.connect(self.move_test_page)
         #사용자 주문하기
@@ -57,9 +51,8 @@ class Smart_App(QMainWindow, form_class):
         # validator = QIntValidator(0,100,self) # 정수만 입력가능
         # self.count_lineEdit.setValidator(QIntValidator(1,100,self)) # 정수만 입력가능  그런데 범위를 지정 해줫는데 범위를 벗어난 3자리 정수도 입력이됨 ??????
         self.user_order_item_btn.clicked.connect(self.select_menu)
-        # self.menu_comboBox.currentTextChanged.connect(self.change_num)# 콤보박스 선택 글자 바뀌면 최대개수 바뀜
+        # 콤보박스 선택 글자 바뀌면 최대개수 바뀜
         self.menu_comboBox.currentTextChanged.connect(self.change_num)
-        self.admin_page_btn_11.clicked.connect(self.move_admin_page)
 
 # #=================================기태======================================
         #기본 페이지 지정 (관리자 페이지)
@@ -67,30 +60,23 @@ class Smart_App(QMainWindow, form_class):
         #상호작용 버튼
         self.see_order_btn.clicked.connect(self.move_order_manage)
         self.inventory_btn.clicked.connect(self.move_inventory)
-        # self.login_stackedWidget.setCurrentIndex(5)
-        self.admin_page_btn_6.clicked.connect(self.move_admin_page)
-        self.admin_page_btn_7.clicked.connect(self.move_admin_page)
-        self.admin_page_btn_9.clicked.connect(self.move_admin_page)
-
         self.see_not_receive_btn.clicked.connect(self.see_not_received_order)
         self.see_qna_btn.clicked.connect(self.see_qna_manage)
         self.renew_order_manage_btn.clicked.connect(self.renew_order_manage_list)
         self.order_status_change_btn.clicked.connect(self.order_status_change)
         self.see_not_receive_btn.clicked.connect(self.see_not_received_order) # 접수되지 않은 주문 확인하기
         self.order_status_change_btn.clicked.connect(self.order_status_change) # 주문 상태 변경 시켜줌 (주문,접수,완료)
+
         # qna창에서 주문번호가 있는 항목 선택하여 버튼 누르면 이동
         self.see_selected_order_btn.clicked.connect(self.see_selected_order)
         self.inventory_cb.currentIndexChanged.connect(self.calculate_min_item)
         self.ingredient_order_btn.clicked.connect(self.order_ingredient)
-        self.ira = inventory_renew_alarm(self)
-
         self.inventory_cb.currentIndexChanged.connect(self.calculate_min_item) # 최대 개수 계산
         self.ingredient_order_btn.clicked.connect(self.order_ingredient) #재고 발주
+        #재고부족 알림 스레드
         self.ira = inventory_renew_alarm(self) # 재고 부족 알림 스레드 생성
         self.inventorySignal = True
         self.ira.start() #재고 부족 알림 스레드 시작
-
-        self.Testpage_btn.clicked.connect(self.move_test_page)
         #자동 주문상태 변경 스레드 기능
         self.order_status_start_btn.clicked.connect(self.auto_order_change_start)
         self.order_status_stop_btn.clicked.connect(self.auto_order_change_stop)
@@ -108,7 +94,6 @@ class Smart_App(QMainWindow, form_class):
         self.Auto_qna_Signal = False
         self.aqt.stop()
         self.qna_start_btn.setEnabled(True)
-
 
     def auto_qna_register(self):
         conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
@@ -133,9 +118,6 @@ class Smart_App(QMainWindow, form_class):
         self.Auto_order_Signal = False
         self.aot.stop()
         self.order_status_start_btn.setEnabled(True)
-
-    def move_test_page(self):
-        self.login_stackedWidget.setCurrentIndex(11)
 #====================================기태====================================================
     def move_test_page(self):
         self.login_stackedWidget.setCurrentIndex(11)
@@ -468,13 +450,9 @@ class Smart_App(QMainWindow, form_class):
             QMessageBox.about(self, "알림", "존재하는 내용입니다")
         conn.commit()
         conn.close()
-    def admin_page(self): # 관리자 페이지로 이동
-        self.login_stackedWidget.setCurrentIndex(5)
 
     def user_page(self):
         self.login_stackedWidget.setCurrentIndex(2)
-
-
     def menu_add(self): # 상품등록 페이지로
         self.login_stackedWidget.setCurrentIndex(10)
         conn = p.connect(host="10.10.21.105", user="wlgur", password="chlwlgur1234", db="obokmoolsan",charset="utf8")
