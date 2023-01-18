@@ -38,7 +38,6 @@ class inventory_renew_alarm(QThread):
                 self.parent.inventory_alarm_level_lbl.setText('')
                 self.parent.inventory_alarm_lbl.setText(f'재고는 충분합니다')
             time.sleep(2)
-
     #스레드의 정지를 위한 메서드
     def stop(self):
         self.quit()
