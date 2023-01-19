@@ -716,20 +716,19 @@ class Alarm_Order(QThread):
         self.parent=parent
 
     def run(self):
+        conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
+                          db='obokmoolsan', charset='utf8')
+        c = conn.cursor()
+        c.execute("SELECT *FROM ordermanage");
+        compare_order3=c.fetchall()
+        conn.close()
         while True:
-            time.sleep(2)
             print('쓰레드 알림창')
-            if self.parent.traffic_signal == 1:
-                print('알림 주문도착')
+            if self.parent.compare_order1 != compare_order3:
+                print("비교하기")
                 self.parent.order_alarm_lbl.setText('주문도착')
-            elif self.parent.traffic_signal==2:
-                print('알림 주문확인')
-                self.parent.order_alarm_lbl.setText('주문확인')
-            elif self.parent.traffic_signal == 0:
-                print('알림 주문알림')
-                self.parent.order_alarm_lbl.setText('주문알림')
-            else:
-                break
+                print('상태변경')
+                time.sleep(10)
 
 
 
