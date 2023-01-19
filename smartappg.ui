@@ -23,7 +23,7 @@
     </rect>
    </property>
    <property name="currentIndex">
-    <number>7</number>
+    <number>9</number>
    </property>
    <widget class="QWidget" name="page">
     <widget class="QPushButton" name="login_btn">
@@ -1281,6 +1281,41 @@
        <height>271</height>
       </rect>
      </property>
+     <column>
+      <property name="text">
+       <string>재료코드</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>재료이름</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>남은 수량</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>단위</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>기준 수량</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>기준 수량가격</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>단위가격</string>
+      </property>
+     </column>
     </widget>
     <widget class="QPushButton" name="ingredient_order_btn">
      <property name="geometry">

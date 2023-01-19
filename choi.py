@@ -678,6 +678,7 @@ class Auto_qna_thread(QThread):
     def run(self):
         while self.parent.Auto_qna_Signal:
             self.parent.auto_qna_register()
+            self.parent.renew_qna_manage_list()
             print('문의가 등록 되었습니다')
             time.sleep(20)
 
