@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5 import uic
+
 matplotlib.rcParams['font.family'] = 'Malgun Gothic'
 matplotlib.rcParams['axes.unicode_minus'] = False
 form_class = uic.loadUiType("smartappg.ui")[0]
@@ -39,14 +40,12 @@ class Smart_App(QMainWindow, form_class):
         self.user_page_btn3.clicked.connect(self.user_page)
         self.user_page_btn4.clicked.connect(self.user_page)
         # 관리자 페이지로 이등
-
         self.admin_page_btn_6.clicked.connect(self.move_admin_page)
         self.admin_page_btn_7.clicked.connect(self.move_admin_page)
         self.admin_page_btn_8.clicked.connect(self.move_admin_page)
         self.admin_page_btn_9.clicked.connect(self.move_admin_page)
         self.admin_page_btn_10.clicked.connect(self.move_admin_page)
         self.admin_page_btn_11.clicked.connect(self.move_admin_page)
-
         # 테스트 페이지로
         self.Testpage_btn.clicked.connect(self.move_test_page)
         # 사용자 주문하기
@@ -54,30 +53,24 @@ class Smart_App(QMainWindow, form_class):
         self.user_order_item_btn.clicked.connect(self.select_menu)
         # 콤보박스 선택 글자 바뀌면 최대개수 바뀜
         self.menu_comboBox.currentTextChanged.connect(self.change_num)
-
         # 자동 주문
         self.order_start_btn.clicked.connect(self.order_test)
         self.order_stop_btn.clicked.connect(self.auto_order_stop)
         # 그래프 관련
         self.sales_btn.clicked.connect(self.make_graph)
         self.netprofit_btn.clicked.connect(self.netsales_graph)
-
         # #=================================기태======================================
-        # 기본 페이지 지정 (관리자 페이지)
-        # self.login_stackedWidget.setCurrentIndex(5)
         # 상호작용 버튼
         self.Testpage_btn.clicked.connect(self.move_test_page)
         self.admin_page_btn_11.clicked.connect(self.move_admin_page)
         self.see_order_btn.clicked.connect(self.move_order_manage)
         self.inventory_btn.clicked.connect(self.move_inventory)
-
         self.see_not_receive_btn.clicked.connect(self.see_not_received_order)
         self.see_qna_btn.clicked.connect(self.see_qna_manage)
         self.renew_order_manage_btn.clicked.connect(self.renew_order_manage_list)
         self.order_status_change_btn.clicked.connect(self.order_status_change)
         self.see_not_receive_btn.clicked.connect(self.see_not_received_order)  # 접수되지 않은 주문 확인하기
         self.order_status_change_btn.clicked.connect(self.order_status_change)  # 주문 상태 변경 시켜줌 (주문,접수,완료)
-
         # qna창에서 주문번호가 있는 항목 선택하여 버튼 누르면 이동
         self.see_selected_order_btn.clicked.connect(self.see_selected_order)
         self.inventory_cb.currentIndexChanged.connect(self.calculate_min_item)
@@ -88,7 +81,6 @@ class Smart_App(QMainWindow, form_class):
         self.ira = inventory_renew_alarm(self)  # 재고 부족 알림 스레드 생성
         self.inventorySignal = True
         self.ira.start()  # 재고 부족 알림 스레드 시작
-
         # 자동 주문상태 변경 스레드 기능
         self.order_status_start_btn.clicked.connect(self.auto_order_change_start)
         self.order_status_stop_btn.clicked.connect(self.auto_order_change_stop)
@@ -382,10 +374,7 @@ class Smart_App(QMainWindow, form_class):
     ##==========================================기태 ====================================================
     ##====================================지혁==========================================================
     def user_order(self):  # 주문하기 버튼 눌럿을때
-        self.traffic_signal = 0
         self.login_stackedWidget.setCurrentIndex(3)
-        # validator=QIntValidator(self)
-        # self.count_lineEdit.setValidator(validator) # QlineEdit에 숫자만 입력
         conn = p.connect(host="10.10.21.105", user="wlgur", password="chlwlgur1234", db="obokmoolsan", charset="utf8")
         c = conn.cursor()
         self.menu_comboBox.clear()
@@ -393,24 +382,19 @@ class Smart_App(QMainWindow, form_class):
         menu_list = c.fetchall()
         for i in menu_list:
             self.menu_comboBox.addItem(i[0])
-
-        c.execute(
-            "SELECT A.메뉴코드, A.재료이름, A.수량, A.재료이름, A.재료코드, B.재료코드, B.재료이름, B.남은수량 FROM bom A INNER JOIN inventory B ON A.재료코드 = B.재료코드")
-        # c.execute("CREATE VIEW OBOKMOOLSAN.MAX_MENU AS SELECT A.메뉴코드, A.재료이름, A.수량, A.재료코드, B.남은수량, B.남은수량/A.수량 AS 최대개수 FROM bom A INNER JOIN inventory B ON A.재료코드 = B.재료코드");
-        c.execute("SELECT *FROM MAX_MENU")
-        max_num = c.fetchall()
-
         c.execute(f"SELECT 메뉴코드 FROM menulist WHERE 메뉴명 = '{self.menu_comboBox.currentText()}'")
         find_code = c.fetchall()
+        c.execute(f"SELECT MIN(최대개수) FROM max_menu WHERE 메뉴코드='{find_code[0][0]}'");
+        max_order = c.fetchone()
 
-        c.execute(f"SELECT MIN(최대개수) FROM max_menu WHERE 메뉴코드='{find_code[0][0]}'")
-        self.max_order = c.fetchone()
+        list=[]
+        for i in range(1, int(max_order[0]) + 1):
+            list.append(str(i))
+            self.maxmenu_comboBox.clear()
+        self.maxmenu_comboBox.addItems(list)
 
-        # self.count_lineEdit.setValidator(QIntValidator(1,int(max_order[0]),self))  # 정수만 입력가능  그런데 범위를 지정 해줫는데 범위를 벗어난 3자리 정수도 입력이됨 ??????
-        for i in range(1, int(self.max_order[0]) + 1):
-            self.maxmenu_comboBox.addItem(str(i))
+        conn.close()
 
-    #
     def change_num(self):  # 메뉴 선택에 따라서 최대 선택 개수 다르게
         self.maxmenu_comboBox.clear()
         conn = p.connect(host="10.10.21.105", user="wlgur", password="chlwlgur1234", db="obokmoolsan", charset="utf8")
@@ -425,11 +409,9 @@ class Smart_App(QMainWindow, form_class):
         else:
             c.execute(f"SELECT MIN(최대개수) FROM max_menu WHERE 메뉴코드='{find_code2[0][0]}'")
             max_order2 = c.fetchone()
-
             for i in range(1, int(max_order2[0]) + 1):
                 self.maxmenu_comboBox.addItem(str(i))
         conn.close()
-
     def select_menu(self):  # 고객 주문내용 db에 추가
         conn = p.connect(host="10.10.21.105", user="wlgur", password="chlwlgur1234", db="obokmoolsan", charset="utf8")
         c = conn.cursor()
@@ -497,6 +479,7 @@ class Smart_App(QMainWindow, form_class):
     def user_page(self):
         self.login_stackedWidget.setCurrentIndex(2)
 
+
     def menu_add(self):  # 상품등록 페이지로
         self.login_stackedWidget.setCurrentIndex(10)
         conn = p.connect(host="10.10.21.105", user="wlgur", password="chlwlgur1234", db="obokmoolsan", charset="utf8")
@@ -527,8 +510,6 @@ class Smart_App(QMainWindow, form_class):
             for j in range(3):
                 self.add_menu_tableWidget.setItem(i, j,
                                                   QTableWidgetItem(str(self.show_menu[i][j])))  # 테이블 위젯에 menulist 표시
-        # if first_data != show_menu:
-        #     self.login_stackedWidget.setCurrentIndex(8)
         conn.commit()
         conn.close()
 
@@ -623,23 +604,19 @@ class Smart_App(QMainWindow, form_class):
         conn.commit()
         conn.close()
 
-
 class Alarm_Menu(QThread):
     def __init__(self, parent):
         super().__init__(parent)
         self.parent = parent
 
     def run(self):  # 쓰레드로 동작 시킬 함수
-        # conn = p.connect(host="10.10.21.105", user="wlgur", password="chlwlgur1234", db="obokmoolsan",charset="utf8")
-        # c = conn.cursor()
         while True:
             if self.parent.menu != self.parent.show_menu:
                 self.parent.new_menu_label.setText('신메뉴 출시')
             else:
                 pass
             time.sleep(0.5)
-            # if self.parent.user_signal==False:
-            #     break
+
 
 
 #####=======================================지혁=============================================
@@ -689,16 +666,20 @@ class Alarm_Order(QThread):
         self.parent = parent
 
     def run(self):
-        conn = p.connect(host='10.10.21.105', port=3306, user='wlgur', password='chlwlgur1234',
-                         db='obokmoolsan', charset='utf8')
-        c = conn.cursor()
-        c.execute("SELECT *FROM ordermanage")
-        compare_order3 = c.fetchall()
-        conn.close()
         while True:
-            if self.parent.compare_order1 != compare_order3:
+            time.sleep(2)
+            print('쓰레드 알림창')
+            if self.parent.traffic_signal == 1:
+                print('알림 주문도착')
                 self.parent.order_alarm_lbl.setText('주문도착')
-                time.sleep(10)
+            elif self.parent.traffic_signal==2:
+                print('알림 주문확인')
+                self.parent.order_alarm_lbl.setText('주문확인')
+            elif self.parent.traffic_signal == 0:
+                print('알림 주문알림')
+                self.parent.order_alarm_lbl.setText('주문알림')
+            else:
+                break
 
 
 class Auto_order_thread(QThread):
@@ -735,7 +716,7 @@ class Auto_Order(QThread):  # 자동 주문 쓰레드
             conn = p.connect(host='10.10.21.105', user='wlgur', password='chlwlgur1234', db='obokmoolsan',
                              charset='utf8')
             c = conn.cursor()
-            c.execute("SELECT DATE_FORMAT(now(), '%Y-%m-%d')") # 현재 날짜
+            c.execute("SELECT DATE_FORMAT(now(), '%Y-%m-%d')")  # 현재 날짜
             order_date2 = c.fetchall()
             c.execute("SELECT 메뉴명 FROM menulist")
             auto_menu = c.fetchall()
@@ -766,7 +747,10 @@ class Auto_qna_thread(QThread):
         while self.parent.Auto_qna_Signal:
             self.parent.auto_qna_register()
             self.parent.renew_qna_manage_list()
-
+    # 스레드의 정지를 위한 메서드
+    def stop(self):
+        self.quit()
+        self.wait(100)  # 5000ms = 5s
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

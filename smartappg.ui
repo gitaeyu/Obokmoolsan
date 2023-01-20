@@ -23,7 +23,7 @@
     </rect>
    </property>
    <property name="currentIndex">
-    <number>5</number>
+    <number>3</number>
    </property>
    <widget class="QWidget" name="page">
     <widget class="QPushButton" name="login_btn">
@@ -446,11 +446,6 @@
      <property name="styleSheet">
       <string notr="true">font: 12pt &quot;Arial&quot;;</string>
      </property>
-     <item>
-      <property name="text">
-       <string>메뉴목록</string>
-      </property>
-     </item>
     </widget>
     <widget class="QPushButton" name="user_order_item_btn">
      <property name="geometry">
